@@ -1,0 +1,50 @@
+# Roda os testes determinísticos em todo push/PR e, se eles passarem,
+# a avaliação com LLM (DeepEval). A chave vem do secret OPENAI_API_KEY:
+# Settings → Secrets and variables → Actions → New repository secret.
+name: Testes
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:  # permite rodar manualmente pela aba Actions
+
+concurrency:
+  group: testes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deterministicos:
+    name: Testes determinísticos (sem API)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python scripts/verificar_ambiente.py --sem-api
+      - run: pytest -m "not llm"
+
+  avaliacao-llm:
+    name: Avaliação com LLM (DeepEval)
+    needs: deterministicos
+    runs-on: ubuntu-latest
+    env:
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      MODELO_AGENTE: gpt-5.4-mini
+      MODELO_JUIZ: gpt-5.4
+      MAX_TENTATIVAS: "5"
+      REQUISICOES_POR_MINUTO: "10"
+      DEEPEVAL_TELEMETRY_OPT_OUT: "YES"
+      DEEPEVAL_RETRY_MAX_ATTEMPTS: "5"
+      DEEPEVAL_RETRY_CAP_SECONDS: "60"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -r requirements.txt
+      # Sem o secret (ex.: PR vindo de fork), o conftest.py pula os testes @llm em vez de falhar.
+      - run: pytest -m llm
