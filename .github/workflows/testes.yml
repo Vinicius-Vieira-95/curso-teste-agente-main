@@ -23,7 +23,6 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
-      - run: python scripts/verificar_ambiente.py --sem-api
       - run: pytest -m "not llm"
 
   avaliacao-llm:
@@ -46,5 +45,9 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      # O verificador exige a chave, então só roda quando o secret existe
+      # (em PR vindo de fork ele fica vazio).
+      - if: env.OPENAI_API_KEY != ''
+        run: python scripts/verificar_ambiente.py --sem-api
       # Sem o secret (ex.: PR vindo de fork), o conftest.py pula os testes @llm em vez de falhar.
       - run: pytest -m llm
