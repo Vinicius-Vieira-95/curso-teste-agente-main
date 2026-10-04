@@ -32,7 +32,7 @@ def calcular_media(notas: list[float]) -> dict:
         raise ValueError("Todas as notas devem estar entre 0 e 10.")
 
     media = round(sum(notas) / len(notas), 2)
-    if media >= MEDIA_APROVACAO:
+    if media > MEDIA_APROVACAO:
         situacao = "aprovado"
     elif media >= MEDIA_MINIMA_FINAL:
         situacao = "prova final"
